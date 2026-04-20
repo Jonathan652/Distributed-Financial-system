@@ -13,9 +13,9 @@ It keeps one authoritative ledger for strong consistency and lets regional nodes
 
 ## Architecture
 
-- `Coordinator Service`: the single write authority for balances and transactions
+- `Coordinator Service`: authoritative write service for a shard of wallets
 - `Regional Node Service`: lightweight edge API deployed per region (Kampala, Mbarara, Gulu, Jinja)
-- `LedgerStore`: authoritative ledger (SQLite file in this reference implementation)
+- `LedgerStore`: authoritative ledger per coordinator shard (SQLite file in this reference implementation)
 - `Client Simulator`: concurrent clients hitting multiple regional nodes
 
 This is not Flux. It is a fresh Python implementation with the same correctness logic, adapted for a multi-region design.
@@ -26,6 +26,30 @@ This is not Flux. It is a fresh Python implementation with the same correctness 
 PYTHONPATH=src /usr/bin/python3 -m mobile_money.main --mode coordinator
 PYTHONPATH=src /usr/bin/python3 -m mobile_money.main --mode regional --region mbarara --coordinator http://<coordinator-ip>:8081
 ```
+
+### Sharded coordinator mode (recommended for peak traffic)
+
+Run two or more coordinator instances (each with its own DB path), then point regional nodes to all coordinator URLs:
+
+```bash
+PYTHONPATH=src /usr/bin/python3 -m mobile_money.main --mode coordinator --port 8081 --db /tmp/ledger-a.sqlite3
+PYTHONPATH=src /usr/bin/python3 -m mobile_money.main --mode coordinator --port 8083 --db /tmp/ledger-b.sqlite3
+
+PYTHONPATH=src /usr/bin/python3 -m mobile_money.main \
+	--mode regional \
+	--region mbarara \
+	--coordinator http://<coordinator-a-ip>:8081 \
+	--coordinators http://<coordinator-a-ip>:8081,http://<coordinator-b-ip>:8083
+```
+
+Regional nodes route each wallet to its owning coordinator and cache the owner mapping.
+If one coordinator is unavailable, regional nodes continue serving wallets owned by other healthy coordinators.
+
+Regional observability endpoints:
+
+- `GET /health`: regional service health and cache stats
+- `GET /cache`: wallet cache count and owner-cache count
+- `GET /coordinators`: known coordinator URLs and health status
 
 ## Short Commands (No Need To Memorize Long Flags)
 
@@ -176,6 +200,12 @@ The simulator will:
 - create seed wallets
 - run concurrent deposits, withdrawals, and transfers from multiple clients
 - verify final balance consistency across all regional nodes
+
+It also prints:
+
+- successful TPS (throughput)
+- latency p50, p95, and p99
+- max observed operation latency
 
 ### 5) Validate services
 

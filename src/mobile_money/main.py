@@ -26,15 +26,19 @@ def run_coordinator(args: argparse.Namespace) -> None:
 
 
 def run_regional(args: argparse.Namespace) -> None:
+    coordinator_urls = [
+        url.strip() for url in (args.coordinators.split(",") if args.coordinators else [args.coordinator]) if url.strip()
+    ]
     server = create_regional_server(
         host=args.host,
         port=args.port,
         region=args.region,
         coordinator_url=args.coordinator,
+        coordinator_urls=coordinator_urls,
     )
     print(
         f"Regional node '{args.region}' listening on http://{args.host}:{args.port} "
-        f"and forwarding to {args.coordinator}"
+        f"and forwarding to coordinators: {', '.join(coordinator_urls)}"
     )
     try:
         server.serve_forever()
@@ -65,6 +69,11 @@ def main() -> None:
         "--coordinator",
         default="http://127.0.0.1:8081",
         help="Coordinator base URL for regional mode",
+    )
+    parser.add_argument(
+        "--coordinators",
+        default="",
+        help="Optional comma-separated coordinator URLs for shard routing in regional mode",
     )
     args = parser.parse_args()
 

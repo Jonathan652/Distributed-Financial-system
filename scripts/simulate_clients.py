@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import random
 import threading
 import time
@@ -229,6 +230,7 @@ def main() -> None:
 
     failures = 0
     successes = 0
+    latencies_ms: list[float] = []
 
     def worker(client_id: int) -> None:
         nonlocal failures, successes
@@ -237,6 +239,7 @@ def main() -> None:
             region = random.choice(REGIONS)
             request_id = f"c{client_id}-op{op_index}-{op}"
             node = random.choice(node_urls)
+            op_start = time.perf_counter()
             try:
                 if op == "deposit":
                     wallet_id = random.choice(wallets)
@@ -258,6 +261,7 @@ def main() -> None:
 
                 with lock:
                     successes += 1
+                    latencies_ms.append((time.perf_counter() - op_start) * 1000)
             except Exception:
                 with lock:
                     failures += 1
@@ -273,6 +277,22 @@ def main() -> None:
     print(f"Completed in {duration:.2f}s")
     print(f"Successful operations: {successes}")
     print(f"Failed operations (expected some due to insufficient funds/offline nodes): {failures}")
+    if duration > 0:
+        print(f"Throughput (successful TPS): {successes / duration:.2f}")
+
+    if latencies_ms:
+        sorted_latencies = sorted(latencies_ms)
+
+        def percentile(values: list[float], p: float) -> float:
+            if not values:
+                return 0.0
+            rank = max(0, min(len(values) - 1, math.ceil((p / 100.0) * len(values)) - 1))
+            return values[rank]
+
+        print(f"Latency p50 (ms): {percentile(sorted_latencies, 50):.2f}")
+        print(f"Latency p95 (ms): {percentile(sorted_latencies, 95):.2f}")
+        print(f"Latency p99 (ms): {percentile(sorted_latencies, 99):.2f}")
+        print(f"Latency max (ms): {sorted_latencies[-1]:.2f}")
 
     print("Validating wallet balance consistency across all regions...")
     inconsistencies = 0

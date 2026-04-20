@@ -5,6 +5,7 @@ set -euo pipefail
 #   ./scripts/start_regional.sh <region> <coordinator_url>
 # Example:
 #   ./scripts/start_regional.sh mbarara http://10.0.0.10:8081
+#   ./scripts/start_regional.sh mbarara http://10.0.0.10:8081 http://10.0.0.10:8081,http://10.0.0.11:8081
 # Optional env vars:
 #   HOST=0.0.0.0 PORT=8082
 
@@ -15,6 +16,7 @@ fi
 
 REGION="$1"
 COORDINATOR_URL="$2"
+COORDINATORS="${3:-}"
 HOST="${HOST:-0.0.0.0}"
 PORT="${PORT:-8082}"
 
@@ -23,4 +25,5 @@ PYTHONPATH=src python3 -m mobile_money.main \
   --region "$REGION" \
   --host "$HOST" \
   --port "$PORT" \
-  --coordinator "$COORDINATOR_URL"
+  --coordinator "$COORDINATOR_URL" \
+  --coordinators "$COORDINATORS"

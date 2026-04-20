@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 
 from .cluster import RegionalCluster
@@ -125,8 +125,8 @@ def create_coordinator_server(
     port: int,
     database_path: str,
     regions: list[str],
-) -> tuple[HTTPServer, LedgerStore]:
+) -> tuple[ThreadingHTTPServer, LedgerStore]:
     ledger = LedgerStore(database_path=database_path)
     cluster = RegionalCluster(ledger=ledger, regions=regions)
     CoordinatorAPI.cluster = cluster
-    return HTTPServer((host, port), CoordinatorAPI), ledger
+    return ThreadingHTTPServer((host, port), CoordinatorAPI), ledger
