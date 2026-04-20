@@ -147,7 +147,9 @@ class RegionalAPI(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:
         try:
-            if self.path == "/health":
+            clean_path = self.path.split("?", 1)[0]
+
+            if clean_path == "/health":
                 self._send_json(
                     200,
                     {
@@ -159,8 +161,18 @@ class RegionalAPI(BaseHTTPRequestHandler):
                 )
                 return
 
-            if self.path.startswith("/wallets/") and self.path.endswith("/transactions"):
-                wallet_id = self.path.split("/")[2]
+            if clean_path == "/wallets":
+                user_id = self._query_param("user_id")
+                if user_id:
+                    coordinator_url = self.state.coordinator_urls[0]
+                    payload = request_json("GET", f"{coordinator_url}/wallets?user_id={user_id}")
+                    self._send_json(200, payload)
+                    return
+                self._send_json(400, {"error": "user_id query parameter required"})
+                return
+
+            if clean_path.startswith("/wallets/") and clean_path.endswith("/transactions"):
+                wallet_id = clean_path.split("/")[2]
                 coordinator_url = self.state.resolve_wallet_owner(wallet_id)
                 payload = self._request_with_owner_fallback(
                     wallet_id,
@@ -170,8 +182,8 @@ class RegionalAPI(BaseHTTPRequestHandler):
                 self._send_json(200, payload)
                 return
 
-            if self.path.startswith("/wallets/"):
-                wallet_id = self.path.split("/")[2]
+            if clean_path.startswith("/wallets/"):
+                wallet_id = clean_path.split("/")[2]
                 coordinator_url = self.state.resolve_wallet_owner(wallet_id)
                 payload = request_json(
                     "GET",
@@ -182,7 +194,7 @@ class RegionalAPI(BaseHTTPRequestHandler):
                 self._send_json(200, payload)
                 return
 
-            if self.path == "/coordinators":
+            if clean_path == "/coordinators":
                 self._send_json(
                     200,
                     {
@@ -343,6 +355,16 @@ class RegionalAPI(BaseHTTPRequestHandler):
         content_length = int(self.headers.get("Content-Length", "0"))
         raw = self.rfile.read(content_length) if content_length else b"{}"
         return json.loads(raw.decode("utf-8"))
+
+    def _query_param(self, param_name: str) -> str | None:
+        if "?" not in self.path:
+            return None
+        query = self.path.split("?", 1)[1]
+        for part in query.split("&"):
+            key, _, value = part.partition("=")
+            if key == param_name:
+                return value
+        return None
 
     def _send_json(self, status: int, payload: dict[str, Any]) -> None:
         encoded = json.dumps(payload, sort_keys=True).encode("utf-8")

@@ -23,6 +23,15 @@ class CoordinatorAPI(BaseHTTPRequestHandler):
                 self._send_json(200, {"regions": self.cluster.list_regions()})
                 return
 
+            if clean_path == "/wallets":
+                user_id = self._query_param("user_id")
+                if user_id:
+                    wallets = self.cluster.ledger.list_wallets_for_user(user_id)
+                    self._send_json(200, {"wallets": [w.to_dict() for w in wallets]})
+                    return
+                self._send_json(400, {"error": "user_id query parameter required"})
+                return
+
             if clean_path.startswith("/wallets/") and clean_path.endswith("/transactions"):
                 wallet_id = clean_path.split("/")[2]
                 txns = [txn.to_dict() for txn in self.cluster.get_transactions(wallet_id)]
@@ -103,6 +112,16 @@ class CoordinatorAPI(BaseHTTPRequestHandler):
         for part in query.split("&"):
             key, _, value = part.partition("=")
             if key == "region":
+                return value
+        return None
+
+    def _query_param(self, param_name: str) -> str | None:
+        if "?" not in self.path:
+            return None
+        query = self.path.split("?", 1)[1]
+        for part in query.split("&"):
+            key, _, value = part.partition("=")
+            if key == param_name:
                 return value
         return None
 
