@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 
+from .console import print_service_banner
 from .coordinator_api import create_coordinator_server
 from .gateway_api import create_gateway_server
 from .regional_api import create_regional_server
@@ -15,8 +16,14 @@ def run_coordinator(args: argparse.Namespace) -> None:
         database_path=args.db,
         regions=regions,
     )
-    print(f"Coordinator listening on http://{args.host}:{args.port} with db={args.db}")
-    print(f"Regions: {', '.join(regions)}")
+    print_service_banner(
+        "Coordinator Service Ready",
+        [
+            ("Endpoint", f"http://{args.host}:{args.port}"),
+            ("Database", args.db),
+            ("Regions", ", ".join(regions)),
+        ],
+    )
     try:
         server.serve_forever()
     except KeyboardInterrupt:
@@ -37,9 +44,13 @@ def run_regional(args: argparse.Namespace) -> None:
         coordinator_url=args.coordinator,
         coordinator_urls=coordinator_urls,
     )
-    print(
-        f"Regional node '{args.region}' listening on http://{args.host}:{args.port} "
-        f"and forwarding to coordinators: {', '.join(coordinator_urls)}"
+    print_service_banner(
+        f"Regional Node Ready ({args.region})",
+        [
+            ("Endpoint", f"http://{args.host}:{args.port}"),
+            ("Region", args.region),
+            ("Coordinators", ", ".join(coordinator_urls)),
+        ],
     )
     try:
         server.serve_forever()
@@ -64,9 +75,14 @@ def run_gateway(args: argparse.Namespace) -> None:
         regional_node_urls=regional_node_urls,
         coordinator_urls=coordinator_urls,
     )
-    print(f"Gateway load-balancer listening on http://{args.host}:{args.port}")
-    print(f"Regional nodes: {', '.join(regional_node_urls)}")
-    print(f"Coordinators: {', '.join(coordinator_urls)}")
+    print_service_banner(
+        "Gateway Service Ready",
+        [
+            ("Endpoint", f"http://{args.host}:{args.port}"),
+            ("Regional nodes", ", ".join(regional_node_urls)),
+            ("Coordinators", ", ".join(coordinator_urls)),
+        ],
+    )
     try:
         server.serve_forever()
     except KeyboardInterrupt:

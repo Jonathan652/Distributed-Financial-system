@@ -7,6 +7,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 from uuid import uuid4
 
+from .console import format_request_log
 from .http_utils import HttpRequestError, request_json
 
 
@@ -144,6 +145,14 @@ class RegionalNodeState:
 
 class RegionalAPI(BaseHTTPRequestHandler):
     state: RegionalNodeState | None = None
+
+    def log_message(self, format: str, *args: Any) -> None:
+        region = self.state.region if self.state is not None else "unknown"
+        service_name = f"regional:{region}"
+        client_ip = self.client_address[0] if self.client_address else "-"
+        status = str(args[1]) if len(args) > 1 else "-"
+        request_line = str(args[0]).strip('"') if args else self.requestline
+        print(format_request_log(service_name, client_ip, request_line, status))
 
     def do_GET(self) -> None:
         try:

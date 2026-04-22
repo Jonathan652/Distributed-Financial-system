@@ -5,6 +5,7 @@ import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 
+from .console import format_request_log
 from .http_utils import HttpRequestError, request_json
 
 
@@ -63,6 +64,12 @@ class GatewayState:
 
 class GatewayAPI(BaseHTTPRequestHandler):
     state: GatewayState | None = None
+
+    def log_message(self, format: str, *args: Any) -> None:
+        client_ip = self.client_address[0] if self.client_address else "-"
+        status = str(args[1]) if len(args) > 1 else "-"
+        request_line = str(args[0]).strip('"') if args else self.requestline
+        print(format_request_log("gateway", client_ip, request_line, status))
 
     def do_GET(self) -> None:
         try:

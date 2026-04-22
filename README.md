@@ -67,6 +67,34 @@ Use these scripts from the project root on every machine:
 ./scripts/start_regional.sh mbarara http://<coordinator-ip>:8081
 ```
 
+Why long commands appear in docs:
+- They show every deploy flag explicitly (`--host`, `--port`, `--coordinator`, etc.) so operators can see exactly what is running.
+- This is useful for first-time setup and troubleshooting, but not ideal for daily use.
+
+### Ultra-Short Per-Machine Commands (recommended)
+
+Do this once on each machine:
+
+```bash
+cp scripts/cluster.env.example scripts/cluster.env
+# edit scripts/cluster.env for this machine
+```
+
+Then start services with one command:
+
+```bash
+# Coordinator machine
+./scripts/start_coordinator.sh
+
+# Regional node machine (REGION and coordinator settings come from scripts/cluster.env)
+./scripts/start_regional_node.sh
+
+# Gateway machine (optional)
+./scripts/start_gateway.sh
+```
+
+This keeps daily operations simple while still allowing full explicit commands when needed.
+
 ## Beginner Guided Client (One Question Only)
 
 The simplest user experience: enter phone number and everything else is automatic.
